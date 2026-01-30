@@ -1,0 +1,31 @@
+{
+  "mode": "organization",
+  "source": {
+    "organization": "your-org-name",
+    "user": null,
+    "topics": [],
+    "repositoriesFile": null,
+    "repositories": []
+  },
+  "filters": {
+    "excludeRepos": [],
+    "includeRepos": [],
+    "onlyPublic": false,
+    "onlyPrivate": false
+  },
+  "period": {
+    "days": 7
+  },
+  "ai": {
+    "provider": "anthropic",
+    "model": "claude-sonnet-4-20250514",
+    "apiKey": null,
+    "maxTokens": 4000,
+    "temperature": 1.0,
+    "promptTemplate": "prompt-template.txt"
+  },
+  "output": {
+    "archiveDir": "archive",
+    "language": "English"
+  }
+}

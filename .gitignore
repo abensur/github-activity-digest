@@ -1,0 +1,9 @@
+node_modules/
+package-lock.json
+bun.lockb
+*.log
+.DS_Store
+.env
+config.json
+repositories.txt
+prompt-template.txt

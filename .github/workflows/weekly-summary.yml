@@ -1,0 +1,62 @@
+---
+name: Weekly Activity Digest
+
+'on':
+  schedule:
+    # Run every Friday at 10:00 AM UTC
+    - cron: '0 10 * * 5'
+  workflow_dispatch:  # Allow manual trigger for testing
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  generate-summary:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Generate weekly summary
+        id: summary
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          # Optional: Override config with environment variables
+          # MODE: organization
+          # ORGANIZATION: your-org-name
+          # PERIOD_DAYS: 7
+        run: |
+          bun run index.ts
+
+      # Optional: Post to Slack
+      # Uncomment and add SLACK_WEBHOOK secret to enable
+      # - name: Post to Slack
+      #   uses: slackapi/slack-github-action@v2.0.0
+      #   with:
+      #     webhook: ${{ secrets.SLACK_WEBHOOK }}
+      #     webhook-type: incoming-webhook
+      #     payload: |
+      #       text: ${{ toJSON(steps.summary.outputs.content) }}
+
+      - name: Commit and push summary
+        run: |
+          email="github-actions[bot]@users.noreply.github.com"
+          git config --local user.email "$email"
+          git config --local user.name "github-actions[bot]"
+          git add archive/
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "Add weekly summary for $(date +%Y-%m-%d)"
+            git push
+          fi
