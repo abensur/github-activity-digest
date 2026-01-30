@@ -37,6 +37,7 @@ async function getUserRepositories(octokit: Octokit, username: string): Promise<
       type: 'all',
       per_page: GITHUB_PAGE_SIZE
     });
+    logger.info(`Fetched ${repos.length} repositories for user ${username}`);
     return repos as Repository[];
   } catch (error) {
     handleError('Error fetching user repositories', error);

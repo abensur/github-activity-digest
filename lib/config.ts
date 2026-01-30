@@ -84,8 +84,8 @@ export async function loadConfig(cliArgs?: {
   if (process.env.ORGANIZATION) {
     rawConfig.source = { ...rawConfig.source, organization: process.env.ORGANIZATION };
   }
-  if (process.env.USER) {
-    rawConfig.source = { ...rawConfig.source, user: process.env.USER };
+  if (process.env.GITHUB_USER) {
+    rawConfig.source = { ...rawConfig.source, user: process.env.GITHUB_USER };
   }
   if (process.env.TOPICS) {
     rawConfig.source = { ...rawConfig.source, topics: process.env.TOPICS.split(',') };
@@ -185,7 +185,7 @@ export async function loadConfig(cliArgs?: {
 }
 
 export function formatDate(date: Date): string {
-  return date.toISOString().split('T')[0];
+  return date.toISOString().split('T')[0]!;
 }
 
 export function getLastWeekDate(days: number): Date {
