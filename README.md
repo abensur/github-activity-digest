@@ -14,6 +14,94 @@ Built with **TypeScript** and **Bun** for blazing-fast performance and excellent
 - **📝 Customizable Prompts** - Full control over AI output and language
 - **🧪 Tested & Typed** - Full TypeScript with unit tests
 - **🚀 Zero Build Required** - Bun runs TypeScript natively
+- **🔄 GitHub Action** - Use directly in your workflows
+
+## 🔄 GitHub Action
+
+Use this action directly in your workflows without any setup:
+
+```yaml
+- uses: abensur/github-activity-digest@v1
+  with:
+    mode: organization
+    organization: my-org
+    days: 7
+    language: English
+  env:
+    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+```
+
+### Full Workflow Example
+
+```yaml
+name: Weekly Activity Digest
+
+on:
+  schedule:
+    - cron: '0 10 * * 5'  # Every Friday at 10:00 AM UTC
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  generate-summary:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Generate Weekly Summary
+        id: digest
+        uses: abensur/github-activity-digest@v1
+        with:
+          mode: organization
+          organization: ${{ github.repository_owner }}
+          days: 7
+          ai-provider: anthropic
+          language: English
+          max-repos: 100
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+
+      - name: Commit Summary
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add archive/
+          git diff --staged --quiet || git commit -m "Weekly summary"
+          git push
+```
+
+### Action Inputs
+
+| Input | Description | Default |
+|-------|-------------|---------|
+| `mode` | Source mode: organization, user, topics, list | `organization` |
+| `organization` | GitHub org name (organization mode) | - |
+| `user` | GitHub username (user mode) | - |
+| `topics` | Comma-separated topics (topics mode) | - |
+| `repositories` | Comma-separated owner/repo (list mode) | - |
+| `days` | Days to look back | `7` |
+| `ai-provider` | anthropic or openai | `anthropic` |
+| `ai-model` | AI model name | `claude-sonnet-4-20250514` |
+| `language` | Output language | `English` |
+| `max-repos` | Max repositories to process | `500` |
+| `exclude-repos` | Comma-separated exclude patterns | - |
+| `include-repos` | Comma-separated include patterns | - |
+| `only-public` | Only public repos | `false` |
+| `only-private` | Only private repos | `false` |
+| `archive-dir` | Directory to save summaries | `archive` |
+
+### Action Outputs
+
+| Output | Description |
+|--------|-------------|
+| `summary` | The generated summary content |
+| `summary-file` | Path to the saved summary file |
+| `repos-processed` | Number of repositories processed |
+| `active-repos` | Number of repositories with activity |
 
 ## 🚀 Quick Start
 
@@ -274,13 +362,16 @@ jobs:
 ```
 github-activity-digest/
 ├── index.ts                     # Main entry point (Citty CLI)
+├── action.yml                   # GitHub Action definition
+├── Dockerfile                   # Docker image for GitHub Action
+├── entrypoint.sh                # Action entrypoint script
 ├── lib/
 │   ├── config.ts                # Config loading with Zod validation
 │   ├── ai.ts                    # Multi-provider AI client
 │   ├── github.ts                # Repository fetching
 │   ├── activity.ts              # Activity tracking & stats
 │   ├── retry.ts                 # Exponential backoff logic
-│   ├── cache.ts                 # In-memory caching (30min TTL)
+│   ├── cache.ts                 # File-based caching (30min TTL)
 │   └── logger.ts                # Centralized logging (consola)
 ├── tests/
 │   ├── config.test.ts           # Config & utility tests
@@ -292,6 +383,7 @@ github-activity-digest/
 ├── config.json                  # Main configuration
 ├── prompt-template.txt          # AI prompt customization
 ├── .env                         # API keys & secrets
+├── .cache/                      # Cached activity data
 └── archive/                     # Generated summaries
 ```
 
@@ -307,8 +399,49 @@ bun test
 # Run tests in watch mode
 bun test --watch
 
+# Type check
+bun run typecheck
+
 # Watch mode (auto-restart on changes)
 bun --watch index.ts
+```
+
+### Local Action Testing
+
+Test the GitHub Action locally using [act](https://github.com/nektos/act):
+
+```bash
+# Install act
+curl -s https://raw.githubusercontent.com/nektos/act/master/install.sh | sudo bash
+# or with package manager:
+# brew install act        # macOS
+# yay -S act              # Arch Linux
+# sudo dnf install act    # Fedora
+
+# Create secrets file from .env
+cp .env .secrets
+
+# Run the workflow locally
+act -j generate-summary --secret-file .secrets
+
+# Run with specific event
+act workflow_dispatch --secret-file .secrets
+```
+
+### Building the Docker Image
+
+```bash
+# Build locally
+docker build -t github-activity-digest .
+
+# Test locally
+docker run --rm \
+  -e GITHUB_TOKEN="$GITHUB_TOKEN" \
+  -e ANTHROPIC_API_KEY="$ANTHROPIC_API_KEY" \
+  -e INPUT_MODE=user \
+  -e INPUT_USER=torvalds \
+  -e INPUT_DAYS=7 \
+  github-activity-digest
 ```
 
 ## 🏗️ Architecture

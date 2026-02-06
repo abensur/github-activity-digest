@@ -1,0 +1,32 @@
+# Dependencies
+node_modules/
+
+# Cache and output
+.cache/
+archive/
+
+# Config and secrets
+.env
+config.json
+repositories.txt
+prompt-template.txt
+
+# Git
+.git/
+.gitignore
+
+# IDE
+.vscode/
+.idea/
+
+# Tests (not needed in production image)
+tests/
+
+# Docs
+README.md
+LICENSE
+*.md
+
+# OS files
+.DS_Store
+Thumbs.db

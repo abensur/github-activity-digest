@@ -1,0 +1,92 @@
+name: 'GitHub Activity Digest'
+description: 'Generate AI-powered weekly summaries of GitHub repository activity'
+author: 'Rafael Abensur'
+branding:
+  icon: 'activity'
+  color: 'purple'
+
+inputs:
+  mode:
+    description: 'Source mode: organization, user, topics, file, or list'
+    required: false
+    default: 'organization'
+  organization:
+    description: 'GitHub organization name (for organization mode)'
+    required: false
+  user:
+    description: 'GitHub username (for user mode)'
+    required: false
+  topics:
+    description: 'Comma-separated topics (for topics mode)'
+    required: false
+  repositories:
+    description: 'Comma-separated owner/repo list (for list mode)'
+    required: false
+  days:
+    description: 'Number of days to look back'
+    required: false
+    default: '7'
+  ai-provider:
+    description: 'AI provider: anthropic or openai'
+    required: false
+    default: 'anthropic'
+  ai-model:
+    description: 'AI model to use'
+    required: false
+    default: 'claude-sonnet-4-20250514'
+  language:
+    description: 'Output language for the summary'
+    required: false
+    default: 'English'
+  max-repos:
+    description: 'Maximum number of repositories to process'
+    required: false
+    default: '500'
+  exclude-repos:
+    description: 'Comma-separated patterns to exclude'
+    required: false
+  include-repos:
+    description: 'Comma-separated patterns to include'
+    required: false
+  only-public:
+    description: 'Only include public repositories'
+    required: false
+    default: 'false'
+  only-private:
+    description: 'Only include private repositories'
+    required: false
+    default: 'false'
+  archive-dir:
+    description: 'Directory to save summaries'
+    required: false
+    default: 'archive'
+
+outputs:
+  summary:
+    description: 'The generated summary content'
+  summary-file:
+    description: 'Path to the saved summary file'
+  repos-processed:
+    description: 'Number of repositories processed'
+  active-repos:
+    description: 'Number of repositories with activity'
+
+runs:
+  using: 'docker'
+  image: 'Dockerfile'
+  env:
+    INPUT_MODE: ${{ inputs.mode }}
+    INPUT_ORGANIZATION: ${{ inputs.organization }}
+    INPUT_USER: ${{ inputs.user }}
+    INPUT_TOPICS: ${{ inputs.topics }}
+    INPUT_REPOSITORIES: ${{ inputs.repositories }}
+    INPUT_DAYS: ${{ inputs.days }}
+    INPUT_AI_PROVIDER: ${{ inputs.ai-provider }}
+    INPUT_AI_MODEL: ${{ inputs.ai-model }}
+    INPUT_LANGUAGE: ${{ inputs.language }}
+    INPUT_MAX_REPOS: ${{ inputs.max-repos }}
+    INPUT_EXCLUDE_REPOS: ${{ inputs.exclude-repos }}
+    INPUT_INCLUDE_REPOS: ${{ inputs.include-repos }}
+    INPUT_ONLY_PUBLIC: ${{ inputs.only-public }}
+    INPUT_ONLY_PRIVATE: ${{ inputs.only-private }}
+    INPUT_ARCHIVE_DIR: ${{ inputs.archive-dir }}
