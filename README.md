@@ -1,24 +1,10 @@
 # GitHub Activity Digest
 
-An intelligent, AI-powered tool that generates comprehensive weekly summaries of GitHub repository activity. Perfect for team updates, progress tracking, and organization-wide visibility.
+A GitHub Action that generates AI-powered weekly summaries of repository activity. Add to any workflow to get automated progress reports.
 
-Built with **TypeScript** and **Bun** for blazing-fast performance and excellent developer experience.
+## Quick Start
 
-## ✨ Features
-
-- **🎯 Flexible Repository Sources** - Organizations, users, topics, custom lists, or files
-- **🤖 Multi-AI Support** - Anthropic Claude or OpenAI GPT
-- **📊 Comprehensive Tracking** - Merged PRs, direct commits, and code statistics
-- **⚡ High Performance** - Parallel processing, smart caching (30min TTL), automatic retry
-- **🔧 Highly Configurable** - JSON config, environment variables, or CLI arguments
-- **📝 Customizable Prompts** - Full control over AI output and language
-- **🧪 Tested & Typed** - Full TypeScript with unit tests
-- **🚀 Zero Build Required** - Bun runs TypeScript natively
-- **🔄 GitHub Action** - Use directly in your workflows
-
-## 🔄 GitHub Action
-
-Use this action directly in your workflows without any setup:
+Add to your workflow:
 
 ```yaml
 - uses: abensur/github-activity-digest@v1
@@ -26,13 +12,20 @@ Use this action directly in your workflows without any setup:
     mode: organization
     organization: my-org
     days: 7
-    language: English
   env:
     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
 ```
 
-### Full Workflow Example
+## ✨ Features
+
+- **🎯 Flexible Sources** - Organizations, users, topics, or custom lists
+- **🤖 Multi-AI** - Anthropic Claude or OpenAI GPT
+- **📊 Comprehensive** - PRs, commits, and code statistics
+- **⚡ Fast** - Parallel processing, caching, automatic retry
+- **🌍 Multi-Language** - Output in any language
+
+## Full Workflow Example
 
 ```yaml
 name: Weekly Activity Digest
@@ -103,61 +96,17 @@ jobs:
 | `repos-processed` | Number of repositories processed |
 | `active-repos` | Number of repositories with activity |
 
-## 🚀 Quick Start
+## � Authentication
 
-### Installation
+### GitHub Token
 
-```bash
-# Install Bun (if needed)
-curl -fsSL https://bun.sh/install | bash
+The `GITHUB_TOKEN` is automatically provided by GitHub Actions. For organization access, create a [Personal Access Token](https://github.com/settings/tokens/new?scopes=repo,read:org) with `repo` and `read:org` scopes.
 
-# Clone and install
-git clone <your-repo-url>
-cd github-activity-digest
-bun install
-```
+### AI Provider Keys
 
-### Setup
-
-```bash
-# Create config files
-cp .env.example .env
-cp config.example.json config.json
-cp prompt-template.example.txt prompt-template.txt
-
-# Add your tokens to .env
-GITHUB_TOKEN=ghp_your_token_here
-ANTHROPIC_API_KEY=sk-ant-your_key_here
-```
-
-### Run
-
-```bash
-# Quick start with CLI args
-bun start -- --user torvalds --days 7
-
-# Or configure config.json and run
-bun start
-```
-
-## 📖 Usage Examples
-
-```bash
-# Track organization repos
-bun start -- --org vercel --days 7
-
-# Track any GitHub user
-bun start -- --user gaearon --days 30
-
-# Track by topics
-bun start -- --topics nextjs,react,typescript
-
-# Use a custom list
-bun start -- --file my-repos.txt
-
-# Force refresh (bypass cache to get latest commits)
-bun start -- --user torvalds --days 7 --no-cache
-```
+Add to repository secrets (Settings → Secrets → Actions):
+- **Anthropic**: [Get API key →](https://console.anthropic.com/settings/keys)
+- **OpenAI**: [Get API key →](https://platform.openai.com/api-keys)
 
 ## ⚙️ Configuration
 
@@ -211,20 +160,38 @@ OPENAI_API_KEY=sk-xxx
 { "ai": { "provider": "openai", "model": "gpt-4-turbo" } }
 ```
 
-## 🔑 Authentication
+## � CLI Usage (Development)
 
-### GitHub Token
+The action can also be run locally as a CLI tool:
 
-Required scopes:
-- `repo` - Access repositories
-- `read:org` - Read organization data (for organization mode)
+```bash
+# Install Bun
+curl -fsSL https://bun.sh/install | bash
 
-[Create token →](https://github.com/settings/tokens/new?scopes=repo,read:org)
+# Clone and install
+git clone https://github.com/abensur/github-activity-digest
+cd github-activity-digest
+bun install
 
-### AI Provider Keys
+# Run
+bun start -- --user torvalds --days 7
+bun start -- --org vercel --days 7
+bun start -- --topics nextjs,react
+```
 
-- **Anthropic**: [Get API key →](https://console.anthropic.com/settings/keys)
-- **OpenAI**: [Get API key →](https://platform.openai.com/api-keys)
+### CLI Options
+
+```bash
+Options:
+  --org <name>        Organization mode
+  --user <name>       User mode
+  --topics <list>     Topics mode (comma-separated)
+  --file <path>       File mode (list of repos)
+  --days <n>          Days to look back (default: 7)
+  --no-cache          Force refresh, bypass cache
+  --provider <name>   AI provider: anthropic or openai
+  --model <name>      AI model name
+```
 
 ## 📝 Output
 
@@ -299,63 +266,7 @@ Fine-tune which repositories to include:
 }
 ```
 
-## 🤖 GitHub Actions
 
-Automate weekly summaries with GitHub Actions.
-
-### Setup
-
-1. **Add API Key to Secrets:**
-   - Go to repository Settings → Secrets and variables → Actions
-   - Click "New repository secret"
-   - Add `ANTHROPIC_API_KEY` (or `OPENAI_API_KEY` if using OpenAI)
-
-2. **Create Workflow File:**
-
-Create `.github/workflows/weekly-summary.yml`:
-
-```yaml
-name: Weekly Activity Summary
-
-on:
-  schedule:
-    - cron: '0 10 * * 5'  # Every Friday at 10:00 AM UTC
-  workflow_dispatch:       # Allows manual trigger from GitHub UI
-
-jobs:
-  generate-summary:
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: oven-sh/setup-bun@v1
-        with:
-          bun-version: latest
-
-      - name: Install dependencies
-        run: bun install
-
-      - name: Generate summary
-        run: bun start
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Auto-provided by GitHub
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          # Or use: OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-
-      - name: Upload summary
-        uses: actions/upload-artifact@v4
-        with:
-          name: weekly-summary-${{ github.run_number }}
-          path: archive/*.md
-          retention-days: 90
-```
-
-**Notes:**
-- `GITHUB_TOKEN` is automatically provided by GitHub Actions (no setup needed)
-- The workflow can be triggered manually from the Actions tab
-- Summaries are saved as artifacts for 90 days
-- Adjust the cron schedule to your preferred timing ([crontab.guru](https://crontab.guru) for help)
 
 ## 📂 Project Structure
 
