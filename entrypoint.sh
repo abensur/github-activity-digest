@@ -98,29 +98,35 @@ bun run /app/index.ts $ARGS 2>&1 | tee /tmp/run-output.txt
 TIMESTAMP=$(date +%Y-%m-%d)
 SUMMARY_FILE="${ARCHIVE_DIR}/weekly-report-${TIMESTAMP}.md"
 
-# Set outputs for GitHub Actions
+# Set outputs for GitHub Actions (skip if not in Actions environment)
 if [ -f "$SUMMARY_FILE" ]; then
-  # Escape multiline content for GitHub Actions
-  SUMMARY_CONTENT=$(cat "$SUMMARY_FILE")
-
-  # Use heredoc for multiline output
-  {
-    echo "summary<<EOF"
-    echo "$SUMMARY_CONTENT"
-    echo "EOF"
-  } >> "$GITHUB_OUTPUT"
-
-  echo "summary-file=$SUMMARY_FILE" >> "$GITHUB_OUTPUT"
   echo "✅ Summary saved to: $SUMMARY_FILE"
+
+  if [ -n "$GITHUB_OUTPUT" ]; then
+    # Escape multiline content for GitHub Actions
+    SUMMARY_CONTENT=$(cat "$SUMMARY_FILE")
+
+    # Use heredoc for multiline output
+    {
+      echo "summary<<EOF"
+      echo "$SUMMARY_CONTENT"
+      echo "EOF"
+    } >> "$GITHUB_OUTPUT"
+
+    echo "summary-file=$SUMMARY_FILE" >> "$GITHUB_OUTPUT"
+  fi
 else
   echo "⚠️ No summary file generated"
 fi
 
 # Count repos from output
-REPOS_PROCESSED=$(grep -oE "Processed [0-9]+ repositories" /tmp/run-output.txt | grep -oE "[0-9]+" || echo "0")
-ACTIVE_REPOS=$(grep -oE "Activity found in [0-9]+ repositories" /tmp/run-output.txt | grep -oE "[0-9]+" || echo "0")
+REPOS_PROCESSED=$(grep -oE "Found [0-9]+ repositories" /tmp/run-output.txt | grep -oE "[0-9]+" | head -1 || echo "0")
+ACTIVE_REPOS=$(grep -oE "Activity found in [0-9]+ repositories" /tmp/run-output.txt | grep -oE "[0-9]+" | head -1 || echo "0")
 
-echo "repos-processed=$REPOS_PROCESSED" >> "$GITHUB_OUTPUT"
-echo "active-repos=$ACTIVE_REPOS" >> "$GITHUB_OUTPUT"
-
-echo "::notice::Processed $REPOS_PROCESSED repositories, $ACTIVE_REPOS with activity"
+if [ -n "$GITHUB_OUTPUT" ]; then
+  echo "repos-processed=$REPOS_PROCESSED" >> "$GITHUB_OUTPUT"
+  echo "active-repos=$ACTIVE_REPOS" >> "$GITHUB_OUTPUT"
+  echo "::notice::Processed $REPOS_PROCESSED repositories, $ACTIVE_REPOS with activity"
+else
+  echo "📊 Processed $REPOS_PROCESSED repositories, $ACTIVE_REPOS with activity"
+fi
