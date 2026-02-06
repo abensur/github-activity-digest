@@ -42,6 +42,40 @@ describe('Retry Logic', () => {
     expect(fn).toHaveBeenCalledTimes(1);
   });
 
+  test('should not retry on permission denied 403 errors', async () => {
+    const error = { status: 403, message: 'Forbidden', response: { headers: {} } };
+    const fn = mock(() => Promise.reject(error));
+
+    await expect(withRetry(fn)).rejects.toEqual(error);
+    expect(fn).toHaveBeenCalledTimes(1);
+  });
+
+  test('should handle rate limit 403 with x-ratelimit-remaining: 0', async () => {
+    let attempts = 0;
+    const resetTime = Math.floor(Date.now() / 1000) + 1; // 1 second from now
+    const error = {
+      status: 403,
+      message: 'Rate limit exceeded',
+      response: {
+        headers: {
+          'x-ratelimit-remaining': '0',
+          'x-ratelimit-reset': String(resetTime)
+        }
+      }
+    };
+    const fn = mock(() => {
+      attempts++;
+      if (attempts === 1) {
+        return Promise.reject(error);
+      }
+      return Promise.resolve('success');
+    });
+
+    const result = await withRetry(fn, { maxRetries: 3, initialDelay: 10 });
+    expect(result).toBe('success');
+    expect(fn).toHaveBeenCalledTimes(2);
+  });
+
   test('should exhaust retries and throw last error', async () => {
     const error = new Error('Persistent error');
     const fn = mock(() => Promise.reject(error));
