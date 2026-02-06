@@ -13,7 +13,7 @@ jobs:
         uses: ./
         with:
           mode: user
-          user: abensur
+          user: torvalds
           days: 7
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
