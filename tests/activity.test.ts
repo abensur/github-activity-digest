@@ -1,8 +1,14 @@
 import { describe, test, expect } from 'bun:test';
 import type { RepoActivity } from '../lib/ai';
+import {
+  calculateTotalStats,
+  filterPRsByDate,
+  truncatePRBody,
+  getCommitFirstLine
+} from '../lib/activity';
 
 describe('Activity Tracking', () => {
-  test('should calculate total stats correctly', () => {
+  test('should calculate total stats correctly using calculateTotalStats', () => {
     const activity: RepoActivity = {
       mergedPRs: [
         {
@@ -32,34 +38,30 @@ describe('Activity Tracking', () => {
       totalStats: { additions: 0, deletions: 0, changedFiles: 0 }
     };
 
-    const totalAdditions = activity.mergedPRs.reduce((sum, pr) => sum + pr.stats.additions, 0) +
-                           activity.directCommits.reduce((sum, c) => sum + c.stats.additions, 0);
-    const totalDeletions = activity.mergedPRs.reduce((sum, pr) => sum + pr.stats.deletions, 0) +
-                           activity.directCommits.reduce((sum, c) => sum + c.stats.deletions, 0);
-    const totalFiles = activity.mergedPRs.reduce((sum, pr) => sum + pr.stats.changedFiles, 0) +
-                       activity.directCommits.reduce((sum, c) => sum + c.stats.changedFiles, 0);
+    const stats = calculateTotalStats(activity);
 
-    expect(totalAdditions).toBe(310);
-    expect(totalDeletions).toBe(85);
-    expect(totalFiles).toBe(15);
+    expect(stats.additions).toBe(310);
+    expect(stats.deletions).toBe(85);
+    expect(stats.changedFiles).toBe(15);
   });
 
-  test('should filter merged PRs by date', () => {
+  test('should filter merged PRs by date using filterPRsByDate', () => {
     const prs = [
       { merged_at: '2026-01-20T10:00:00Z' },
       { merged_at: '2026-01-25T10:00:00Z' },
-      { merged_at: '2026-01-28T10:00:00Z' }
+      { merged_at: '2026-01-28T10:00:00Z' },
+      { merged_at: null }
     ];
 
     const since = new Date('2026-01-23T00:00:00Z');
-    const filtered = prs.filter(pr => new Date(pr.merged_at) >= since);
+    const filtered = filterPRsByDate(prs, since);
 
     expect(filtered).toHaveLength(2);
   });
 
-  test('should extract commit message first line', () => {
+  test('should extract commit message first line using getCommitFirstLine', () => {
     const message = 'feat: add new feature\n\nThis is a detailed description\nwith multiple lines';
-    const firstLine = message.split('\n')[0];
+    const firstLine = getCommitFirstLine(message);
 
     expect(firstLine).toBe('feat: add new feature');
   });
@@ -71,15 +73,25 @@ describe('Activity Tracking', () => {
       totalStats: { additions: 0, deletions: 0, changedFiles: 0 }
     };
 
-    const hasActivity = activity.mergedPRs.length > 0 || activity.directCommits.length > 0;
-    expect(hasActivity).toBe(false);
+    const stats = calculateTotalStats(activity);
+    expect(stats.additions).toBe(0);
+    expect(stats.deletions).toBe(0);
+    expect(stats.changedFiles).toBe(0);
   });
 
-  test('should truncate long PR bodies', () => {
+  test('should truncate long PR bodies using truncatePRBody', () => {
     const longBody = 'A'.repeat(1000);
-    const maxLength = 500;
-    const truncated = longBody.length > maxLength ? longBody.substring(0, maxLength) : longBody;
+    const truncated = truncatePRBody(longBody);
 
-    expect(truncated.length).toBe(maxLength);
+    expect(truncated.length).toBe(500);
+  });
+
+  test('should handle null PR body', () => {
+    expect(truncatePRBody(null)).toBe('');
+  });
+
+  test('should not truncate short PR body', () => {
+    const shortBody = 'Short description';
+    expect(truncatePRBody(shortBody)).toBe(shortBody);
   });
 });

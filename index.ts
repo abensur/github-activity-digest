@@ -14,7 +14,7 @@ const main = defineCommand({
   meta: {
     name: 'github-activity-digest',
     description: 'Generate AI-powered summaries of GitHub repository activity',
-    version: '1.0.0'
+    version: '2.0.0'
   },
   args: {
     org: {
@@ -93,7 +93,7 @@ const main = defineCommand({
       }
       repoActivities = await trackRepositoryActivities(octokit, repos, since);
       if (!config.noCache) {
-        setCachedActivity(repos, since, repoActivities);
+        await setCachedActivity(repos, since, repoActivities);
       }
     }
 

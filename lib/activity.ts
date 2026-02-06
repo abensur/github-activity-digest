@@ -8,6 +8,49 @@ const MAX_DIRECT_COMMITS = 50;
 const BATCH_SIZE = 10;
 const PR_BODY_MAX_LENGTH = 500;
 
+/** Calculate total stats from an activity object */
+export function calculateTotalStats(activity: RepoActivity): RepoActivity['totalStats'] {
+  const prStats = activity.mergedPRs.reduce(
+    (acc, pr) => ({
+      additions: acc.additions + pr.stats.additions,
+      deletions: acc.deletions + pr.stats.deletions,
+      changedFiles: acc.changedFiles + pr.stats.changedFiles
+    }),
+    { additions: 0, deletions: 0, changedFiles: 0 }
+  );
+
+  const commitStats = activity.directCommits.reduce(
+    (acc, commit) => ({
+      additions: acc.additions + commit.stats.additions,
+      deletions: acc.deletions + commit.stats.deletions,
+      changedFiles: acc.changedFiles + commit.stats.changedFiles
+    }),
+    { additions: 0, deletions: 0, changedFiles: 0 }
+  );
+
+  return {
+    additions: prStats.additions + commitStats.additions,
+    deletions: prStats.deletions + commitStats.deletions,
+    changedFiles: prStats.changedFiles + commitStats.changedFiles
+  };
+}
+
+/** Filter merged PRs by date */
+export function filterPRsByDate<T extends { merged_at: string | null }>(prs: T[], since: Date): T[] {
+  return prs.filter(pr => pr.merged_at && new Date(pr.merged_at) >= since);
+}
+
+/** Truncate PR body to max length */
+export function truncatePRBody(body: string | null, maxLength = PR_BODY_MAX_LENGTH): string {
+  if (!body) return '';
+  return body.length > maxLength ? body.substring(0, maxLength) : body;
+}
+
+/** Extract first line of commit message */
+export function getCommitFirstLine(message: string): string {
+  return message.split('\n')[0] ?? '';
+}
+
 interface PR {
   number: number;
   title: string;
@@ -32,14 +75,14 @@ interface GitHubCommitDetail extends GitHubCommit {
 async function getMergedPRs(octokit: Octokit, owner: string, repo: string, since: Date): Promise<PR[]> {
   return withRetry(async () => {
     try {
-      const prs = await octokit.paginate(octokit.pulls.list, {
+      const prs = await withRateLimit(octokit, () => octokit.paginate(octokit.pulls.list, {
         owner,
         repo,
         state: 'closed',
         sort: 'updated',
         direction: 'desc',
         per_page: GITHUB_PAGE_SIZE
-      });
+      }));
 
       return (prs as PR[]).filter(pr => pr.merged_at && new Date(pr.merged_at) >= since);
     } catch (error) {
@@ -52,12 +95,12 @@ async function getMergedPRs(octokit: Octokit, owner: string, repo: string, since
 async function getPRCommits(octokit: Octokit, owner: string, repo: string, prNumber: number) {
   return withRetry(async () => {
     try {
-      const commits = await octokit.paginate(octokit.pulls.listCommits, {
+      const commits = await withRateLimit(octokit, () => octokit.paginate(octokit.pulls.listCommits, {
         owner,
         repo,
         pull_number: prNumber,
         per_page: GITHUB_PAGE_SIZE
-      });
+      }));
 
       return (commits as GitHubCommit[]).map(c => ({
         sha: c.sha.substring(0, 7),
@@ -65,6 +108,7 @@ async function getPRCommits(octokit: Octokit, owner: string, repo: string, prNum
         date: c.commit.author?.date
       }));
     } catch (error) {
+      logger.debug(`Failed to fetch commits for PR #${prNumber} in ${owner}/${repo}`);
       return [];
     }
   });
@@ -90,16 +134,16 @@ async function getPRStats(octokit: Octokit, owner: string, repo: string, prNumbe
 
 async function getDirectCommits(octokit: Octokit, owner: string, repo: string, since: Date, mergedPRShas: Set<string>) {
   try {
-    const { data: repoData } = await octokit.repos.get({ owner, repo });
+    const { data: repoData } = await withRateLimit(octokit, () => octokit.repos.get({ owner, repo }));
     const defaultBranch = repoData.default_branch;
 
-    const commits = await octokit.paginate(octokit.repos.listCommits, {
+    const commits = await withRateLimit(octokit, () => octokit.paginate(octokit.repos.listCommits, {
       owner,
       repo,
       sha: defaultBranch,
       since: since.toISOString(),
       per_page: GITHUB_PAGE_SIZE
-    });
+    }));
 
     // Filter out commits from PRs
     const directCommits = (commits as GitHubCommit[]).filter(c => {
@@ -204,7 +248,8 @@ async function getRepoActivity(octokit: Octokit, owner: string, repo: string, si
       }
     }
   } catch (error) {
-    // Silently handle errors - already logged in retry logic if needed
+    const message = error instanceof Error ? error.message : String(error);
+    logger.debug(`Error fetching activity: ${message}`);
   }
 
   return activity;
@@ -226,6 +271,9 @@ export async function trackRepositoryActivities(
 
     const batchPromises = batch.map(async (repo) => {
       const [owner, name] = repo.full_name.split('/');
+      if (!owner || !name) {
+        throw new Error(`Invalid repository name: ${repo.full_name}`);
+      }
       const activity = await getRepoActivity(octokit, owner, name, since);
       const prCount = activity.mergedPRs.length;
       const commitCount = activity.directCommits.length;

@@ -1,4 +1,3 @@
-import type { Octokit } from '@octokit/rest';
 import { logger } from './logger';
 
 const MAX_RETRIES = 3;
@@ -44,7 +43,7 @@ export async function withRetry<T>(
 }
 
 export async function withRateLimit<T>(
-  octokit: Octokit,
+  _octokit: unknown,
   fn: () => Promise<T>
 ): Promise<T> {
   try {

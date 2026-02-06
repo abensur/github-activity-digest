@@ -141,7 +141,11 @@ export async function generateSummary(
         temperature: config.ai.temperature,
         messages: [{ role: 'user', content: prompt }]
       });
-      return message.content[0].type === 'text' ? message.content[0].text : '';
+      const firstBlock = message.content[0];
+      if (firstBlock && firstBlock.type === 'text') {
+        return firstBlock.text;
+      }
+      return '';
 
     } else if (config.ai.provider === 'openai' && aiClient instanceof OpenAI) {
       const response = await aiClient.chat.completions.create({
@@ -150,7 +154,7 @@ export async function generateSummary(
         temperature: config.ai.temperature,
         messages: [{ role: 'user', content: prompt }]
       });
-      return response.choices[0].message.content || '';
+      return response.choices[0]?.message.content ?? '';
 
     } else {
       throw new Error(`Unsupported AI provider: ${config.ai.provider}`);

@@ -1,5 +1,4 @@
-import { describe, test, expect, mock } from 'bun:test';
-import type { Octokit } from '@octokit/rest';
+import { describe, test, expect } from 'bun:test';
 
 describe('GitHub Integration', () => {
   test('should handle repository filtering by name', () => {
@@ -26,9 +25,9 @@ describe('GitHub Integration', () => {
     const privateOnly = repos.filter(r => r.private);
 
     expect(publicOnly).toHaveLength(1);
-    expect(publicOnly[0].name).toBe('public-repo');
+    expect(publicOnly[0]?.name).toBe('public-repo');
     expect(privateOnly).toHaveLength(1);
-    expect(privateOnly[0].name).toBe('private-repo');
+    expect(privateOnly[0]?.name).toBe('private-repo');
   });
 
   test('should parse repository full_name correctly', () => {
@@ -44,7 +43,7 @@ describe('GitHub Integration', () => {
 
     invalidNames.forEach(name => {
       const parts = name.split('/');
-      const isValid = parts.length === 2 && parts[0].length > 0 && parts[1].length > 0;
+      const isValid = parts.length === 2 && (parts[0]?.length ?? 0) > 0 && (parts[1]?.length ?? 0) > 0;
       expect(isValid).toBe(false);
     });
   });

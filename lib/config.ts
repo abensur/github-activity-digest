@@ -9,7 +9,8 @@ const DEFAULTS = {
   AI_MODEL: 'claude-sonnet-4-20250514',
   AI_MAX_TOKENS: 4000,
   AI_TEMPERATURE: 1.0,
-  PROMPT_TEMPLATE: 'prompt-template.txt'
+  PROMPT_TEMPLATE: 'prompt-template.txt',
+  MAX_REPOS: 500
 } as const;
 
 const ConfigSchema = z.object({
@@ -25,8 +26,9 @@ const ConfigSchema = z.object({
     excludeRepos: z.array(z.string()).optional(),
     includeRepos: z.array(z.string()).optional(),
     onlyPublic: z.boolean().optional(),
-    onlyPrivate: z.boolean().optional()
-  }).default({}),
+    onlyPrivate: z.boolean().optional(),
+    maxRepos: z.number().default(DEFAULTS.MAX_REPOS)
+  }).default({ maxRepos: DEFAULTS.MAX_REPOS }),
   period: z.object({
     days: z.number().default(DEFAULTS.PERIOD_DAYS),
     startDate: z.string().default(''),
@@ -51,12 +53,10 @@ const ConfigSchema = z.object({
   }),
   output: z.object({
     archiveDir: z.string().default(DEFAULTS.ARCHIVE_DIR),
-    language: z.string().default(DEFAULTS.LANGUAGE),
-    dateFormat: z.string().default('YYYY-MM-DD')
+    language: z.string().default(DEFAULTS.LANGUAGE)
   }).default({
     archiveDir: DEFAULTS.ARCHIVE_DIR,
-    language: DEFAULTS.LANGUAGE,
-    dateFormat: 'YYYY-MM-DD'
+    language: DEFAULTS.LANGUAGE
   }),
   noCache: z.boolean().optional()
 });

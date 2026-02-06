@@ -7,3 +7,5 @@ bun.lockb
 config.json
 repositories.txt
 prompt-template.txt
+.cache/
+archive/

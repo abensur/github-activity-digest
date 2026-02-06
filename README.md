@@ -81,7 +81,8 @@ bun start -- --user torvalds --days 7 --no-cache
   "source": { "organization": "your-org" },
   "filters": {
     "excludeRepos": ["archived-", "test-"],
-    "includeRepos": ["api-", "app-"]
+    "includeRepos": ["api-", "app-"],
+    "maxRepos": 500
   },
   "period": { "days": 7 },
   "ai": {
@@ -168,7 +169,16 @@ Significant development activity across 5 repositories with
 ## 🔧 Advanced Features
 
 ### Smart Caching
-Activity data is cached for 30 minutes to reduce API calls and improve performance. The cache is automatically managed - no configuration needed.
+Activity data is cached to `.cache/` directory for 30 minutes. The cache persists across runs, making it ideal for CI/CD workflows.
+
+**For GitHub Actions**, add caching to your workflow:
+```yaml
+- uses: actions/cache@v4
+  with:
+    path: .cache
+    key: github-activity-${{ github.run_id }}
+    restore-keys: github-activity-
+```
 
 **Force refresh:** Use `--no-cache` to bypass cache and fetch the latest commits:
 ```bash
@@ -195,7 +205,8 @@ Fine-tune which repositories to include:
     "excludeRepos": ["archived-", "test-"],
     "includeRepos": ["api-", "service-"],
     "onlyPublic": false,
-    "onlyPrivate": false
+    "onlyPrivate": false,
+    "maxRepos": 500
   }
 }
 ```

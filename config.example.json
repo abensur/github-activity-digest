@@ -11,7 +11,8 @@
     "excludeRepos": [],
     "includeRepos": [],
     "onlyPublic": false,
-    "onlyPrivate": false
+    "onlyPrivate": false,
+    "maxRepos": 500
   },
   "period": {
     "days": 7

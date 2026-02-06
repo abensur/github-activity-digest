@@ -1,4 +1,4 @@
-import { describe, test, expect, mock } from 'bun:test';
+import { describe, test, expect } from 'bun:test';
 import { initializeAIClient } from '../lib/ai';
 import type { Config } from '../lib/config';
 

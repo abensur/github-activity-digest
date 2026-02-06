@@ -2,6 +2,7 @@ import type { Octokit } from '@octokit/rest';
 import path from 'path';
 import type { Config } from './config';
 import { logger } from './logger';
+import { withRateLimit } from './retry';
 
 interface Repository {
   full_name: string;
@@ -18,11 +19,11 @@ function handleError(context: string, error: unknown): void {
 
 async function getOrgRepositories(octokit: Octokit, orgName: string): Promise<Repository[]> {
   try {
-    const repos = await octokit.paginate(octokit.repos.listForOrg, {
+    const repos = await withRateLimit(octokit, () => octokit.paginate(octokit.repos.listForOrg, {
       org: orgName,
       type: 'all',
       per_page: GITHUB_PAGE_SIZE
-    });
+    }));
     return repos as Repository[];
   } catch (error) {
     handleError('Error fetching org repositories', error);
@@ -32,11 +33,11 @@ async function getOrgRepositories(octokit: Octokit, orgName: string): Promise<Re
 
 async function getUserRepositories(octokit: Octokit, username: string): Promise<Repository[]> {
   try {
-    const repos = await octokit.paginate(octokit.repos.listForUser, {
+    const repos = await withRateLimit(octokit, () => octokit.paginate(octokit.repos.listForUser, {
       username,
       type: 'all',
       per_page: GITHUB_PAGE_SIZE
-    });
+    }));
     logger.info(`Fetched ${repos.length} repositories for user ${username}`);
     return repos as Repository[];
   } catch (error) {
@@ -50,10 +51,10 @@ async function getRepositoriesByTopics(octokit: Octokit, topics: string[]): Prom
     const allRepos: Repository[] = [];
 
     for (const topic of topics) {
-      const result = await octokit.paginate(octokit.search.repos, {
+      const result = await withRateLimit(octokit, () => octokit.paginate(octokit.search.repos, {
         q: `topic:${topic}`,
         per_page: GITHUB_PAGE_SIZE
-      });
+      }));
       allRepos.push(...(result as Repository[]));
     }
 
@@ -77,7 +78,7 @@ async function fetchRepository(octokit: Octokit, fullName: string): Promise<Repo
   }
 
   try {
-    const { data } = await octokit.repos.get({ owner, repo });
+    const { data } = await withRateLimit(octokit, () => octokit.repos.get({ owner, repo }));
     return data as Repository;
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
@@ -149,45 +150,36 @@ function applyFilters(repos: Repository[], filters: Config['filters']): Reposito
 export async function getAllRepositories(octokit: Octokit, config: Config): Promise<Repository[]> {
   let repos: Repository[] = [];
 
+  // Note: Config validation in loadConfig() guarantees required values exist per mode
   switch (config.mode) {
     case 'organization':
-      if (!config.source.organization) {
-        throw new Error('Organization name is required in organization mode');
-      }
-      repos = await getOrgRepositories(octokit, config.source.organization);
+      repos = await getOrgRepositories(octokit, config.source.organization!);
       break;
 
     case 'user':
-      if (!config.source.user) {
-        throw new Error('Username is required in user mode');
-      }
-      repos = await getUserRepositories(octokit, config.source.user);
+      repos = await getUserRepositories(octokit, config.source.user!);
       break;
 
     case 'topics':
-      if (!config.source.topics || config.source.topics.length === 0) {
-        throw new Error('At least one topic is required in topics mode');
-      }
-      repos = await getRepositoriesByTopics(octokit, config.source.topics);
+      repos = await getRepositoriesByTopics(octokit, config.source.topics!);
       break;
 
     case 'file':
-      if (!config.source.repositoriesFile) {
-        throw new Error('Repository file path is required in file mode');
-      }
-      repos = await getRepositoriesFromFile(octokit, config.source.repositoriesFile);
+      repos = await getRepositoriesFromFile(octokit, config.source.repositoriesFile!);
       break;
 
     case 'list':
-      if (!config.source.repositories || config.source.repositories.length === 0) {
-        throw new Error('At least one repository is required in list mode');
-      }
-      repos = await getRepositoriesFromList(octokit, config.source.repositories);
+      repos = await getRepositoriesFromList(octokit, config.source.repositories!);
       break;
-
-    default:
-      throw new Error(`Unknown mode '${config.mode}'`);
   }
 
-  return applyFilters(repos, config.filters);
+  const filtered = applyFilters(repos, config.filters);
+
+  // Apply maxRepos limit
+  if (filtered.length > config.filters.maxRepos) {
+    logger.warn(`Limiting to ${config.filters.maxRepos} repositories (found ${filtered.length}). Increase filters.maxRepos to process more.`);
+    return filtered.slice(0, config.filters.maxRepos);
+  }
+
+  return filtered;
 }

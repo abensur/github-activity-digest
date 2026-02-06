@@ -8,7 +8,8 @@
     "start": "bun run index.ts",
     "summary": "bun run index.ts",
     "test": "bun test",
-    "test:watch": "bun test --watch"
+    "test:watch": "bun test --watch",
+    "typecheck": "tsc --noEmit"
   },
   "keywords": [
     "github",
