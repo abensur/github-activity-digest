@@ -9,3 +9,5 @@ repositories.txt
 prompt-template.txt
 .cache/
 archive/
+.secrets
+bin/
