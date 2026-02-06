@@ -183,3 +183,29 @@ export async function getAllRepositories(octokit: Octokit, config: Config): Prom
 
   return filtered;
 }
+
+export async function getRateLimitInfo(octokit: Octokit): Promise<{ remaining: number; limit: number; resetAt: Date }> {
+  try {
+    const { data } = await octokit.rateLimit.get();
+    return {
+      remaining: data.rate.remaining,
+      limit: data.rate.limit,
+      resetAt: new Date(data.rate.reset * 1000)
+    };
+  } catch {
+    return { remaining: -1, limit: -1, resetAt: new Date() };
+  }
+}
+
+export function displayRateLimitInfo(info: { remaining: number; limit: number; resetAt: Date }): void {
+  if (info.remaining < 0) return;
+  
+  const percent = Math.round((info.remaining / info.limit) * 100);
+  const resetIn = Math.max(0, Math.ceil((info.resetAt.getTime() - Date.now()) / 60000));
+  
+  if (info.remaining < 100) {
+    logger.warn(`⚠️ API rate limit: ${info.remaining}/${info.limit} (${percent}%) - resets in ${resetIn}min`);
+  } else {
+    logger.info(`📊 API rate limit: ${info.remaining}/${info.limit} (${percent}%) - resets in ${resetIn}min`);
+  }
+}

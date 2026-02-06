@@ -4,8 +4,8 @@ LABEL org.opencontainers.image.source="https://github.com/abensur/github-activit
 LABEL org.opencontainers.image.description="AI-powered GitHub activity summarizer"
 LABEL org.opencontainers.image.licenses="MIT"
 
-# Install jq for JSON processing in entrypoint
-RUN apk add --no-cache jq
+# Install jq for JSON processing and curl for webhooks
+RUN apk add --no-cache jq curl
 
 WORKDIR /app
 

@@ -86,6 +86,9 @@ jobs:
 | `only-public` | Only public repos | `false` |
 | `only-private` | Only private repos | `false` |
 | `archive-dir` | Directory to save summaries | `archive` |
+| `output-format` | Output format: markdown, json, or both | `markdown` |
+| `slack-webhook` | Slack incoming webhook URL | - |
+| `discord-webhook` | Discord webhook URL | - |
 
 ### Action Outputs
 
@@ -93,6 +96,7 @@ jobs:
 |--------|-------------|
 | `summary` | The generated summary content |
 | `summary-file` | Path to the saved summary file |
+| `json-file` | Path to JSON file (if output-format includes json) |
 | `repos-processed` | Number of repositories processed |
 | `active-repos` | Number of repositories with activity |
 

@@ -22,6 +22,9 @@ EXCLUDE_REPOS="${INPUT_EXCLUDE_REPOS:-}"
 INCLUDE_REPOS="${INPUT_INCLUDE_REPOS:-}"
 ONLY_PUBLIC="${INPUT_ONLY_PUBLIC:-false}"
 ONLY_PRIVATE="${INPUT_ONLY_PRIVATE:-false}"
+OUTPUT_FORMAT="${INPUT_OUTPUT_FORMAT:-markdown}"
+SLACK_WEBHOOK="${INPUT_SLACK_WEBHOOK:-}"
+DISCORD_WEBHOOK="${INPUT_DISCORD_WEBHOOK:-}"
 
 # Build CLI arguments from action inputs
 ARGS=""
@@ -129,4 +132,46 @@ if [ -n "$GITHUB_OUTPUT" ]; then
   echo "::notice::Processed $REPOS_PROCESSED repositories, $ACTIVE_REPOS with activity"
 else
   echo "📊 Processed $REPOS_PROCESSED repositories, $ACTIVE_REPOS with activity"
+fi
+
+# Generate JSON output if requested
+if [ "$OUTPUT_FORMAT" = "json" ] || [ "$OUTPUT_FORMAT" = "both" ]; then
+  JSON_FILE="${ARCHIVE_DIR}/weekly-report-${TIMESTAMP}.json"
+  if [ -f "$SUMMARY_FILE" ]; then
+    jq -n \
+      --arg summary "$(cat "$SUMMARY_FILE")" \
+      --arg date "$TIMESTAMP" \
+      --argjson repos_processed "$REPOS_PROCESSED" \
+      --argjson active_repos "$ACTIVE_REPOS" \
+      '{
+        date: $date,
+        repos_processed: $repos_processed,
+        active_repos: $active_repos,
+        summary: $summary
+      }' > "$JSON_FILE"
+    echo "📄 JSON saved to: $JSON_FILE"
+    if [ -n "$GITHUB_OUTPUT" ]; then
+      echo "json-file=$JSON_FILE" >> "$GITHUB_OUTPUT"
+    fi
+  fi
+fi
+
+# Send to Slack if webhook provided
+if [ -n "$SLACK_WEBHOOK" ] && [ -f "$SUMMARY_FILE" ]; then
+  echo "📤 Sending to Slack..."
+  SLACK_PAYLOAD=$(jq -n --arg text "$(cat "$SUMMARY_FILE")" '{text: $text}')
+  curl -s -X POST -H 'Content-type: application/json' \
+    --data "$SLACK_PAYLOAD" \
+    "$SLACK_WEBHOOK" > /dev/null && echo "✅ Slack notification sent" || echo "⚠️ Slack notification failed"
+fi
+
+# Send to Discord if webhook provided
+if [ -n "$DISCORD_WEBHOOK" ] && [ -f "$SUMMARY_FILE" ]; then
+  echo "📤 Sending to Discord..."
+  # Discord has 2000 char limit per message, truncate if needed
+  SUMMARY_TEXT=$(cat "$SUMMARY_FILE" | head -c 1900)
+  DISCORD_PAYLOAD=$(jq -n --arg content "$SUMMARY_TEXT" '{content: $content}')
+  curl -s -X POST -H 'Content-type: application/json' \
+    --data "$DISCORD_PAYLOAD" \
+    "$DISCORD_WEBHOOK" > /dev/null && echo "✅ Discord notification sent" || echo "⚠️ Discord notification failed"
 fi

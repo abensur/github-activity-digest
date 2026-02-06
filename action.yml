@@ -60,12 +60,24 @@ inputs:
     description: 'Directory to save summaries'
     required: false
     default: 'archive'
+  output-format:
+    description: 'Output format: markdown, json, or both'
+    required: false
+    default: 'markdown'
+  slack-webhook:
+    description: 'Slack incoming webhook URL for notifications'
+    required: false
+  discord-webhook:
+    description: 'Discord webhook URL for notifications'
+    required: false
 
 outputs:
   summary:
     description: 'The generated summary content'
   summary-file:
     description: 'Path to the saved summary file'
+  json-file:
+    description: 'Path to JSON file (if output-format includes json)'
   repos-processed:
     description: 'Number of repositories processed'
   active-repos:
@@ -90,3 +102,6 @@ runs:
     INPUT_ONLY_PUBLIC: ${{ inputs.only-public }}
     INPUT_ONLY_PRIVATE: ${{ inputs.only-private }}
     INPUT_ARCHIVE_DIR: ${{ inputs.archive-dir }}
+    INPUT_OUTPUT_FORMAT: ${{ inputs.output-format }}
+    INPUT_SLACK_WEBHOOK: ${{ inputs.slack-webhook }}
+    INPUT_DISCORD_WEBHOOK: ${{ inputs.discord-webhook }}

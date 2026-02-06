@@ -3,7 +3,7 @@ import { defineCommand, runMain } from 'citty';
 import { Octokit } from '@octokit/rest';
 import { loadConfig, type Config } from './lib/config';
 import { initializeAIClient, generateSummary, type AIClient } from './lib/ai';
-import { getAllRepositories } from './lib/github';
+import { getAllRepositories, getRateLimitInfo, displayRateLimitInfo } from './lib/github';
 import { trackRepositoryActivities } from './lib/activity';
 import { getCachedActivity, setCachedActivity } from './lib/cache';
 import { mkdir } from 'fs/promises';
@@ -131,6 +131,10 @@ const main = defineCommand({
 
       logger.success(`Saved to: ${filepath}`);
     }
+
+    // Display rate limit info at the end
+    const rateLimit = await getRateLimitInfo(octokit);
+    displayRateLimitInfo(rateLimit);
   }
 });
 
